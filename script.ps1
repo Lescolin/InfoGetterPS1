@@ -43,6 +43,7 @@ $NAVIGATOR += "Firefox: $NAVIGATOR2" + '"'
 #Get data on local users
 $USERS = Get-LocalUser | Select-Object Name, Enabled | Out-String
 $USERS = '"' + "$USERS" + '"'
+$USERS = $USERS -replace [environment]::NewLine, " "
 
 #Get all active process
 $ALLPROCESS = Get-Process
@@ -52,6 +53,7 @@ $ALLPROCESS = $ALLPROCESS -replace "System.Diagnostics.Process"
 #Get ports in listening mode
 $PORTS = Get-NetTcpConnection -State Listen | Select-Object LocalPort| Sort-Object -Property LocalPort | Out-String
 $PORTS = '"' + "$PORTS" + '"'
+$PORTS = $PORTS -replace [environment]::NewLine, " "
 
 #Get the OS
 $OSV = [Environment]::OSVersion | Select-Object VersionString
