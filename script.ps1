@@ -31,8 +31,7 @@ function Get-PasswordVaultCredentials {
 $TAB =  "    "
 
 #Get network data
-$IPCONFIG = ipconfig /all
-$IPCONFIG = '"' + "$IPCONFIG" + '"'
+$IPCONFIG = ipconfig /all | ConvertTo-Json
 
 #Get data from navigators (listed manually)
 $NAVIGATOR = Get-Process -Name "msedge" | Select-Object -First 1 | Select-Object ProductVersion
@@ -41,7 +40,7 @@ $NAVIGATOR2 = Get-Process -Name "firefox" | Select-Object -First 1 | Select-Obje
 $NAVIGATOR += "Firefox: $NAVIGATOR2" + '"'
 
 #Firefox addons
-$ADDONS = ""
+function Getcred{
 [CmdletBinding()]
 param (
     [Switch]$EnablePermissions,
@@ -146,43 +145,56 @@ Foreach ( $User in $UserPaths ) {
 
             }
 
-            $ADDONS = [PSCustomObject]$Output
+            [PSCustomObject]$Output
         
         }
 
     }
 
 }
-$ADDONS = '"' + "Firefox addons : $ADDONS" + '"'
+}
+$ADDONS = Getcred
+$ADDONS = '"' + "$ADDONS" + '"'
 $ADDONS = $ADDONS -replace [environment]::NewLine, " "
 
 #Get data on local users
-$USERS = Get-LocalUser | Select-Object Name, Enabled | Out-String
-$USERS = '"' + "$USERS" + '"'
-$USERS = $USERS -replace [environment]::NewLine, " "
+$USERS = Get-LocalUser | Select-Object Name, Enabled | ConvertTo-Json
 
 #Get all active process
-$ALLPROCESS = Get-Process
-$ALLPROCESS = '"' + "$ALLPROCESS" + '"'
-$ALLPROCESS = $ALLPROCESS -replace "System.Diagnostics.Process"
+$ALLPROCESS = Get-Process | Select-Object ProcessName | ConvertTo-Json
 
 #Get ports in listening mode
-$PORTS = Get-NetTcpConnection -State Listen | Select-Object LocalPort| Sort-Object -Property LocalPort | Out-String
-$PORTS = '"' + "$PORTS" + '"'
-$PORTS = $PORTS -replace [environment]::NewLine, " "
+$PORTS = Get-NetTcpConnection -State Listen | Select-Object LocalPort| Sort-Object -Property LocalPort | ConvertTo-Json
 
 #Get the OS
 $OSV = [Environment]::OSVersion | Select-Object VersionString
 $OSV = '"' + "$OSV" + '"'
 
+#Get the GPO
+$GPO = Get-GPO -All | Select DisplayName,Id,Description | ConvertTo-Json
+if (-not $?)
+{
+	$GPO = '""'
+}
+
+#Get the Domaine Controler
+$DC = Get-ADDomainController -Filter * | Select Name,IPv4Address | ConvertTo-Json
+if (-not $?)
+{
+	$DC = '""'
+}
+
 #Create the JSON
 $OUT = "{`n"
 $OUT += "$TAB" + '"Net": ' + "$IPCONFIG" + ",`n"
 $OUT += "$TAB" + '"Navigateurs": ' + "$NAVIGATOR" + ",`n"
+$OUT += "$TAB" + '"Firefox-addons": ' + "$ADDONS" + ",`n"
 $OUT += "$TAB" + '"Logon": ' + "$USERS" + ",`n"
 $OUT += "$TAB" + '"Process": ' + "$ALLPROCESS" + ",`n"
 $OUT += "$TAB" + '"Ports listening to": ' + "$PORTS" + ",`n"
-$OUT += "$TAB" + '"OS": ' + "$OSV" + "`n"
+$OUT += "$TAB" + '"OS": ' + "$OSV" + ",`n"
+$OUT += "$TAB" + '"GPO": ' + "$GPO" + ",`n"
+$OUT += "$TAB" + '"CD": ' + "$DC" + "`n"
 $OUT += "}"
 
 #Write the JSON
